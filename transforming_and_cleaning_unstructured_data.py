@@ -32,7 +32,7 @@ dataWoHeader.map(lambda x: x.split(','))
 #When you type in the above. Nothing will happen. Remember Lazy Evaluation?
 #We will have to call an action on the above RDD to so that spark actually materializes it and gives us an output
 
-dataWoHeader.map(lambda x: x.splt(',')).take(5)
+dataWoHeader.map(lambda x: x.split(',')).take(5)
 
 #This will display the first 5 rows as a lists of lists of strings
 
@@ -105,11 +105,31 @@ crimesFiltered = crimes.filter(lambda x: not (x.Offense=="NA" or x.OccurrenceYea
 #Identifying and filtering anomalies
 #Checking for corrupt records
 #Ex: We are dealing with data related to NY. If the location turns up to be 'Canada', then there is something wrong
-#Checking for anomalies such as these
+#Checking for anomalies such as these by checking the minimum and the maximum LATITUDE and LONGITUDE
 
-crimesFiltered.map(lambda x: (float(x.Latitude), float(x.Longitude))).reduce(lambda x: (min(x[0])),min(x[1]))
+crimesFiltered.map(lambda x: (float(x.Latitude), float(x.Longitude))).reduce(lambda x,y: (min(x[0],y[0]), min(x[1], y[1])))
+crimesFiltered.map(lambda x: (float(x.Latitude), float(x.Longitude))).reduce(lambda x,y: (max(x[0],y[0]), max(x[1], y[1])))
 
-	
+#Now let us summarize and visualize crimes in NYC
+#Let us look at the trend of crimes by year
 
+crimesFiltered.map(lambda x: x.OccurrenceYear).countByValue()
+
+#Visualizing the density of BURGLARY crimes on google maps using the 'gmap' library in python
+
+#Importing the package and preparing the base of our map which will be centered on NYC
+import gmplot
+gmap = gmplot.GoogleMapPlotter(37.428, -122.145, 16).from_geocode("New York City")
+
+#Collecting latitudes in a list
+#Note that we are only looking at the Offense 'BURGLARY' occurred in year 2015
+b_lats = crimesFiltered.filter(lambda x: x.Offense=="BURGLARY" and x.OccurrenceYear == "2015").map(lambda x: float(x.Latitude)).collect()
+#Collecting longitudes in a list
+b_longs = crimesFiltered.filter(lambda x: x.Offense=="BURGLARY" and x.OccurrenceYear == "2015").map(lambda x: float(x.Longitude)).collect()
+
+#Plotting using the scatter method
+gmap.scatter(b_lats, b_longs, '#4440C8', size = 40, marker = False)
+#Display it
+gmap.draw("mymap.html")
                    
 
